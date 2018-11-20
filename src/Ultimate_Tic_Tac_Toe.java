@@ -8,23 +8,32 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
 import java.util.Arrays;
 
 // Main class with JFrame and ActionListener enabled
-public class Ultimate_Tic_Tac_Toe extends JFrame implements ActionListener {
+public class Ultimate_Tic_Tac_Toe implements ActionListener {
 
-	private static final long serialVersionUID = -1567707511932220992L;
+	// Private class Variables
+	// Main frame that contains everything
+	public JFrame mainFrame = new JFrame();
 
 	// Adds panels
-	JPanel[][] panels = new JPanel[3][3];
-	JPanel gamePanel = new JPanel();
-	JPanel controlPanel = new JPanel();
+	private static JPanel[][] panels = new JPanel[3][3];
+	private static JPanel gamePanel = new JPanel();
+	private static JPanel controlPanel = new JPanel();
 
 	// Adds control button
-	JButton newP = new JButton("New PVP");
+	private static JButton newP = new JButton("New PVP");
 
 	// Adds game button container
-	Object[][] gameButtons = new Object[3][3];
+	private static Object[][] gameButtons = new Object[3][3];
 
 	// Declares class variables
 	private static int count = 0;
@@ -38,8 +47,107 @@ public class Ultimate_Tic_Tac_Toe extends JFrame implements ActionListener {
 			grid3 = new GridLayout(3, 3);
 	private static final FlowLayout flow1 = new FlowLayout();
 
+	// MenuBar variables
+	// The menuBar itself
+	private JMenuBar menuBar = new JMenuBar();
+
+	// The first menu
+	private JMenu gameMenu = new JMenu("Game");
+
+	// New game with F2 as keyboard shortcut - maintains current settings
+	private JMenuItem newGame = new JMenuItem("New game", KeyEvent.VK_F2);
+
+	// The submenu under gameMenu
+	private JMenu newSubmenu = new JMenu("New");
+
+	// Menu item to save game
+	private JMenuItem saveGame = new JMenuItem("Save game");
+
+	// Menu item to load game
+	private JMenuItem loadGame = new JMenuItem("Load Game");
+
+	// Help menu for general information
+	private JMenu helpMenu = new JMenu("Help");
+
+	// About button displays game's creators
+	private JMenuItem about = new JMenuItem("About");
+
+	// How to play button links to a webpage on how to play Ultimate Tic-Tac-Toe
+	private JMenuItem howToPlay = new JMenuItem("How to Play");
+
+	// Declares boolean value for whether a button was pressed
+	private boolean pressed, finished = false;
+
+	// Boolean and menuItem for sound or not
+	public static boolean soundCheck = true;
+	private JCheckBoxMenuItem sound = new JCheckBoxMenuItem("Sound", true);
+
+	/**
+	 * read a saved game from a file
+	 *
+	 * @param fileName The name the user has the games saved as.
+	 * @throws FileNotFoundException
+	 * @throws IOException
+	 * @throws ClassNotFoundException
+	 */
+	public static void readFromFile(String fileName) throws FileNotFoundException, IOException, ClassNotFoundException {
+		try {
+			FileInputStream fileIn = new FileInputStream(fileName);
+			ObjectInputStream inStream = new ObjectInputStream(fileIn);
+			panels = (JPanel[][]) inStream.readObject();
+			gamePanel = (JPanel) inStream.readObject();
+			controlPanel = (JPanel) inStream.readObject();
+			gameButtons = (Object[][]) inStream.readObject();
+			count = Integer.parseInt((String) inStream.readObject());
+			checkBig = (boolean[][]) inStream.readObject();
+			checkClicked = (boolean[][][][]) inStream.readObject();
+			checkArea = (boolean[][][][]) inStream.readObject();
+			checkWin = (boolean[][][][]) inStream.readObject();
+			aMoves = (char[][][][]) inStream.readObject();
+			bMoves = (char[][]) inStream.readObject();
+			inStream.close();
+			fileIn.close();
+			new Ultimate_Tic_Tac_Toe(true);
+		} catch (FileNotFoundException e) {
+		}
+	}
+
+	/**
+	 * Saves a current game to a file
+	 *
+	 * @param array    2D array for objects that holds all of the information about
+	 *                 the game board.
+	 * @param fileName The name the user has the games saved as.
+	 * @throws FileNotFoundException
+	 * @throws IOException
+	 */
+	public static void writeToFile(String fileName) throws FileNotFoundException, IOException {
+		try {
+			FileOutputStream fileOut;
+			if (fileName.contains(".mssg"))
+				fileOut = new FileOutputStream(fileName);
+			else
+				fileOut = new FileOutputStream(fileName + ".mssg");
+			ObjectOutput outStream = new ObjectOutputStream(fileOut);
+			outStream.writeObject(panels);
+			outStream.writeObject(gamePanel);
+			outStream.writeObject(controlPanel);
+			outStream.writeObject(gameButtons);
+			outStream.writeObject(count);
+			outStream.writeObject(checkBig);
+			outStream.writeObject(checkClicked);
+			outStream.writeObject(checkArea);
+			outStream.writeObject(checkWin);
+			outStream.writeObject(aMoves);
+			outStream.writeObject(bMoves);
+			outStream.close();
+			fileOut.close();
+		} catch (IOException e) {
+		}
+	}
+
 	// Constructor
-	public Ultimate_Tic_Tac_Toe() {
+	public Ultimate_Tic_Tac_Toe(boolean isLoadGame) {
 
 		// Adds Hgap and Vgap to grid1
 		grid1.setHgap(10);
@@ -105,22 +213,31 @@ public class Ultimate_Tic_Tac_Toe extends JFrame implements ActionListener {
 				gamePanel.add(panels[i][j]);
 
 		// Adds gamePanel and controlPanel
-		getContentPane().add(gamePanel);
-		getContentPane().add(controlPanel);
+		mainFrame.add(gamePanel);
+		mainFrame.add(controlPanel);
 
-		// Sets title, size, layout Box on y-axis, and location of GUI window
-		setTitle("Ultimate Tic Tac Toe");
-		setSize(733, 1080);
-		setLayout(new GridLayout(2, 1));
-		setLocationRelativeTo(null);
-		setVisible(true);
+		// Adds menuBar to frame
+		mainFrame.setJMenuBar(createMenuBar());
+
+		// Sets title, size, layout and location of GUI window
+		mainFrame.setTitle("Ultimate Tic-Tac-Toe");
+		mainFrame.setLayout(new FlowLayout());
+		mainFrame.setSize(640, 640);
+		mainFrame.setLocationRelativeTo(null);
+
+		// Makes the program terminate on press of close window
+		mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+		// Sets window to visible and disable resizing
+		mainFrame.setResizable(false);
+		mainFrame.setVisible(true);
 	}
 
 	// Main method
 	public static void main(String[] args) {
 
 		// Starts a new instance of Ultimate Tic Tac Toe
-		new Ultimate_Tic_Tac_Toe();
+		new MenuGUI();
 	}
 
 	// Action performed method for action listener
@@ -131,7 +248,7 @@ public class Ultimate_Tic_Tac_Toe extends JFrame implements ActionListener {
 
 			// Close instance and create a new one
 			dispose();
-			new Ultimate_Tic_Tac_Toe();
+			new MenuGUI();
 			count = 0;
 		}
 
