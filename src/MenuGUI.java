@@ -1,5 +1,5 @@
 /*
- * Authors: Raymond Li
+ * Author: Raymond Li
  * Date: 19/11/2018
  * Description: User first starts with a welcome message and options to start a new game
  * 				and	to load a game. New game brings out 3 choices - Beginner, Intermediate
@@ -90,7 +90,7 @@ public class MenuGUI implements ActionListener {
 		 */
 		if (newGame == event.getSource()) {
 			try {
-				new Ultimate_Tic_Tac_Toe(false);
+				Ultimate_Tic_Tac_Toe.initialize();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -153,5 +153,4 @@ public class MenuGUI implements ActionListener {
 			new MenuGUI();
 		}
 	}
-
 }

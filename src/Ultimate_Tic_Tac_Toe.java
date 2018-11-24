@@ -5,6 +5,9 @@
  */
 
 //Imports java GUI classes
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -18,16 +21,15 @@ import java.io.ObjectOutputStream;
 import java.util.Arrays;
 
 // Main class with JFrame and ActionListener enabled
-public class Ultimate_Tic_Tac_Toe implements ActionListener {
+public class Ultimate_Tic_Tac_Toe {
 
 	// Private class Variables
 	// Main frame that contains everything
-	public JFrame mainFrame = new JFrame();
+	private static JFrame mainFrame = new JFrame();
 
 	// Adds panels
 	private static JPanel[][] panels = new JPanel[3][3];
 	private static JPanel gamePanel = new JPanel();
-	private static JPanel controlPanel = new JPanel();
 
 	// Adds control button
 	private static JButton newP = new JButton("New PVP");
@@ -49,38 +51,32 @@ public class Ultimate_Tic_Tac_Toe implements ActionListener {
 
 	// MenuBar variables
 	// The menuBar itself
-	private JMenuBar menuBar = new JMenuBar();
+	private static JMenuBar menuBar = new JMenuBar();
 
 	// The first menu
-	private JMenu gameMenu = new JMenu("Game");
+	private static JMenu gameMenu = new JMenu("Game");
 
 	// New game with F2 as keyboard shortcut - maintains current settings
-	private JMenuItem newGame = new JMenuItem("New game", KeyEvent.VK_F2);
-
-	// The submenu under gameMenu
-	private JMenu newSubmenu = new JMenu("New");
+	private static JMenuItem newGame = new JMenuItem("New game", KeyEvent.VK_F2);
 
 	// Menu item to save game
-	private JMenuItem saveGame = new JMenuItem("Save game");
+	private static JMenuItem saveGame = new JMenuItem("Save game");
 
 	// Menu item to load game
-	private JMenuItem loadGame = new JMenuItem("Load Game");
+	private static JMenuItem loadGame = new JMenuItem("Load Game");
 
 	// Help menu for general information
-	private JMenu helpMenu = new JMenu("Help");
+	private static JMenu helpMenu = new JMenu("Help");
 
 	// About button displays game's creators
-	private JMenuItem about = new JMenuItem("About");
+	private static JMenuItem about = new JMenuItem("About");
 
 	// How to play button links to a webpage on how to play Ultimate Tic-Tac-Toe
-	private JMenuItem howToPlay = new JMenuItem("How to Play");
-
-	// Declares boolean value for whether a button was pressed
-	private boolean pressed, finished = false;
+	private static JMenuItem howToPlay = new JMenuItem("How to Play");
 
 	// Boolean and menuItem for sound or not
-	public static boolean soundCheck = true;
-	private JCheckBoxMenuItem sound = new JCheckBoxMenuItem("Sound", true);
+	private static boolean soundCheck = true;
+	private static JCheckBoxMenuItem sound = new JCheckBoxMenuItem("Sound", true);
 
 	/**
 	 * read a saved game from a file
@@ -90,13 +86,12 @@ public class Ultimate_Tic_Tac_Toe implements ActionListener {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static void readFromFile(String fileName) throws FileNotFoundException, IOException, ClassNotFoundException {
+	public static void readFromFile(String fileName) {
 		try {
 			FileInputStream fileIn = new FileInputStream(fileName);
 			ObjectInputStream inStream = new ObjectInputStream(fileIn);
 			panels = (JPanel[][]) inStream.readObject();
 			gamePanel = (JPanel) inStream.readObject();
-			controlPanel = (JPanel) inStream.readObject();
 			gameButtons = (Object[][]) inStream.readObject();
 			count = Integer.parseInt((String) inStream.readObject());
 			checkBig = (boolean[][]) inStream.readObject();
@@ -105,10 +100,15 @@ public class Ultimate_Tic_Tac_Toe implements ActionListener {
 			checkWin = (boolean[][][][]) inStream.readObject();
 			aMoves = (char[][][][]) inStream.readObject();
 			bMoves = (char[][]) inStream.readObject();
+			count = Integer.parseInt((String) inStream.readObject());
 			inStream.close();
 			fileIn.close();
-			new Ultimate_Tic_Tac_Toe(true);
-		} catch (FileNotFoundException e) {
+
+			// Shows a popup telling the user that the saved game has been loaded
+			JOptionPane.showMessageDialog(mainFrame.getContentPane(), new JLabel("Savegame loaded!", JLabel.CENTER),
+					"FileLoader", JOptionPane.INFORMATION_MESSAGE);
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
 
@@ -131,7 +131,6 @@ public class Ultimate_Tic_Tac_Toe implements ActionListener {
 			ObjectOutput outStream = new ObjectOutputStream(fileOut);
 			outStream.writeObject(panels);
 			outStream.writeObject(gamePanel);
-			outStream.writeObject(controlPanel);
 			outStream.writeObject(gameButtons);
 			outStream.writeObject(count);
 			outStream.writeObject(checkBig);
@@ -140,14 +139,15 @@ public class Ultimate_Tic_Tac_Toe implements ActionListener {
 			outStream.writeObject(checkWin);
 			outStream.writeObject(aMoves);
 			outStream.writeObject(bMoves);
+			outStream.writeObject(soundCheck);
 			outStream.close();
 			fileOut.close();
 		} catch (IOException e) {
 		}
 	}
 
-	// Constructor
-	public Ultimate_Tic_Tac_Toe(boolean isLoadGame) {
+	// Initializer method
+	public static void initialize() {
 
 		// Adds Hgap and Vgap to grid1
 		grid1.setHgap(10);
@@ -163,9 +163,8 @@ public class Ultimate_Tic_Tac_Toe implements ActionListener {
 				panels[i][j].setBorder(BorderFactory.createLineBorder(Color.BLUE, 5, false));
 			}
 
-		// Sets layout of panels
+		// Sets layout of gamePanel
 		gamePanel.setLayout(grid1);
-		controlPanel.setLayout(flow1);
 
 		// Sets border and background of gamePanel
 		gamePanel.setBackground(Color.BLACK);
@@ -196,16 +195,10 @@ public class Ultimate_Tic_Tac_Toe implements ActionListener {
 				for (int k = 0; k < ((JButton[][]) gameButtons[i][j]).length; k++)
 					for (int l = 0; l < ((JButton[][]) gameButtons[i][j])[k].length; l++) {
 						((JButton[][]) gameButtons[i][j])[k][l] = new JButton();
-						((JButton[][]) gameButtons[i][j])[k][l].addActionListener(this);
+						((JButton[][]) gameButtons[i][j])[k][l].addActionListener(Ultimate_Tic_Tac_Toe.l);
 						((JButton[][]) gameButtons[i][j])[k][l].setFont(new Font("Comic Sans MS", Font.PLAIN, 40));
 						panels[i][j].add(((JButton[][]) gameButtons[i][j])[k][l]);
 					}
-
-		// Adds ActionListeners, tooltip texts and fonts to controlPanel button
-		newP.addActionListener(this);
-		newP.setToolTipText("New game against another player");
-		newP.setFont(new Font("Comic Sans MS", Font.PLAIN, 12));
-		controlPanel.add(newP);
 
 		// Adds panels to gamePanel
 		for (int i = 0; i < panels.length; i++)
@@ -214,7 +207,6 @@ public class Ultimate_Tic_Tac_Toe implements ActionListener {
 
 		// Adds gamePanel and controlPanel
 		mainFrame.add(gamePanel);
-		mainFrame.add(controlPanel);
 
 		// Adds menuBar to frame
 		mainFrame.setJMenuBar(createMenuBar());
@@ -231,6 +223,59 @@ public class Ultimate_Tic_Tac_Toe implements ActionListener {
 		// Sets window to visible and disable resizing
 		mainFrame.setResizable(false);
 		mainFrame.setVisible(true);
+
+		// Plays new game sound if sound is enabled
+		if (soundCheck) {
+			AudioInputStream newGameSound;
+			try {
+				newGameSound = AudioSystem
+						.getAudioInputStream(Ultimate_Tic_Tac_Toe.class.getClassLoader().getResource("NewGame.wav"));
+				Clip clip = AudioSystem.getClip();
+				clip.open(newGameSound);
+				clip.start();
+			} catch (Exception e) {
+				JOptionPane.showMessageDialog(mainFrame.getContentPane(),
+						new JLabel("You did not download the music file!", JLabel.CENTER),
+						"Ultimate Tic-Tac-Toe Sound Player", JOptionPane.ERROR_MESSAGE);
+			}
+		}
+	}
+
+	/**
+	 * Creates the menuBar
+	 * 
+	 * @return The finished JMenuBar
+	 */
+	public static JMenuBar createMenuBar() {
+
+		// Adds gameMenu to menuBar
+		menuBar.add(gameMenu);
+
+		// Adds actionListeners to menuItems and adds menuItems to gameMenu
+		newGame.addActionListener(l);
+		gameMenu.add(newGame);
+		saveGame.addActionListener(l);
+		gameMenu.add(saveGame);
+		loadGame.addActionListener(l);
+		gameMenu.add(loadGame);
+
+		// Adds newGame submenu
+		gameMenu.addSeparator();
+
+		// Adds sound menuItem with actionListener to gameMenu
+		gameMenu.addSeparator();
+		sound.addActionListener(l);
+		gameMenu.add(sound);
+
+		// Adds help menu to menubar
+		menuBar.add(helpMenu);
+		about.addActionListener(l);
+		helpMenu.add(about);
+		howToPlay.addActionListener(l);
+		helpMenu.add(howToPlay);
+
+		// Returns the finished menuBar
+		return menuBar;
 	}
 
 	// Main method
@@ -240,183 +285,195 @@ public class Ultimate_Tic_Tac_Toe implements ActionListener {
 		new MenuGUI();
 	}
 
-	// Action performed method for action listener
-	public void actionPerformed(ActionEvent event) {
+	// ActionListener
+	private static ActionListener l = new ActionListener() {
 
-		// Handles control clicks
-		if (newP == event.getSource()) {
+		// Action performed method for action listener
+		public void actionPerformed(ActionEvent event) {
 
-			// Close instance and create a new one
-			dispose();
-			new MenuGUI();
-			count = 0;
-		}
+			// New game button (in menubar)
+			if (newGame == event.getSource()) {
+				initialize();
+				mainFrame.revalidate();
+				mainFrame.repaint();
+			}
 
-		// Handles game clicks
-		for (int i = 0; i < gameButtons.length; i++)
-			for (int j = 0; j < gameButtons[i].length; j++)
-				if (!(gameButtons[i][j].equals(bigButtonX)) && !(gameButtons[i][j].equals(bigButtonO)))
-					for (int k = 0; k < ((JButton[][]) gameButtons[i][j]).length; k++)
-						for (int l = 0; l < ((JButton[][]) gameButtons[i][j])[k].length; l++)
-							if ((JButton) ((JButton[][]) gameButtons[i][j])[k][l] == event.getSource()
-									&& checkClicked[i][j][k][l] && checkArea[i][j][k][l]) {
+			// Handles game clicks
+			for (int i = 0; i < gameButtons.length; i++)
+				for (int j = 0; j < gameButtons[i].length; j++)
+					if (!(gameButtons[i][j].equals(bigButtonX)) && !(gameButtons[i][j].equals(bigButtonO)))
+						for (int k = 0; k < ((JButton[][]) gameButtons[i][j]).length; k++)
+							for (int l = 0; l < ((JButton[][]) gameButtons[i][j])[k].length; l++)
+								if ((JButton) ((JButton[][]) gameButtons[i][j])[k][l] == event.getSource()
+										&& checkClicked[i][j][k][l] && checkArea[i][j][k][l]) {
 
-								// If player x clicks
-								if (count % 2 == 0) {
+									// If player x clicks
+									if (count % 2 == 0) {
 
-									// Sets text of clicked button to X
-									((JButton[][]) gameButtons[i][j])[k][l].setText("X");
+										// Sets text of clicked button to X
+										((JButton[][]) gameButtons[i][j])[k][l].setText("X");
 
-									// Sets move to x
-									aMoves[i][j][k][l] = 'X';
-								}
+										// Sets move to x
+										aMoves[i][j][k][l] = 'X';
+									}
 
-								else {
+									else {
 
-									// Sets text of clicked button to X
-									((JButton[][]) gameButtons[i][j])[k][l].setText("O");
+										// Sets text of clicked button to X
+										((JButton[][]) gameButtons[i][j])[k][l].setText("O");
 
-									// Sets move to x
-									aMoves[i][j][k][l] = 'O';
-								}
+										// Sets move to x
+										aMoves[i][j][k][l] = 'O';
+									}
 
-								// Disables reclicking button
-								checkClicked[i][j][k][l] = false;
+									// Disables reclicking button
+									checkClicked[i][j][k][l] = false;
 
-								// Checks if clicked area has been won
-								if (checkBig[k][l]) {
+									// Checks if clicked area has been won
+									if (checkBig[k][l]) {
 
-									// Enables and selects in blue the corresponding area
-									for (int m = 0; m < checkArea.length; m++)
-										for (int n = 0; n < checkArea[m].length; n++) {
-											panels[m][n].setBorder(null);
-											for (boolean[] row : checkArea[m][n])
-												Arrays.fill(row, false);
-										}
-									for (boolean[] row : checkArea[k][l])
-										Arrays.fill(row, true);
-									panels[k][l].setBorder(BorderFactory.createLineBorder(Color.BLUE, 5, false));
-								}
-
-								else
-
-									// Select in blue all valid areas
-									for (int m = 0; m < checkArea.length; m++)
-										for (int n = 0; n < checkArea[m].length; n++)
-											if (checkBig[m][n]) {
-												panels[m][n].setBorder(
-														BorderFactory.createLineBorder(Color.BLUE, 5, false));
+										// Enables and selects in blue the corresponding area
+										for (int m = 0; m < checkArea.length; m++)
+											for (int n = 0; n < checkArea[m].length; n++) {
+												panels[m][n].setBorder(null);
 												for (boolean[] row : checkArea[m][n])
-													Arrays.fill(row, true);
+													Arrays.fill(row, false);
 											}
+										for (boolean[] row : checkArea[k][l])
+											Arrays.fill(row, true);
+										panels[k][l].setBorder(BorderFactory.createLineBorder(Color.BLUE, 5, false));
+									}
 
-								// Increments count for X/O order
-								count++;
-							}
+									else
 
-		// Checks for wins
-		for (int i = 0; i < checkWin.length; i++)
-			for (int j = 0; j < checkWin[i].length; j++)
-				if (checkBig[i][j])
-					for (int k = 0; k < (checkWin[i][j]).length; k++)
-						for (int l = 0; l < (checkWin[i][j])[k].length; l++)
+										// Select in blue all valid areas
+										for (int m = 0; m < checkArea.length; m++)
+											for (int n = 0; n < checkArea[m].length; n++)
+												if (checkBig[m][n]) {
+													panels[m][n].setBorder(
+															BorderFactory.createLineBorder(Color.BLUE, 5, false));
+													for (boolean[] row : checkArea[m][n])
+														Arrays.fill(row, true);
+												}
 
-							// Checks for whether player X wins
-							if (
+									// Increments count for X/O order
+									count++;
+								}
 
-							// Horizontal checks
-							(aMoves[i][j][0][0] == aMoves[i][j][0][1] && aMoves[i][j][0][0] == aMoves[i][j][0][2]
-									&& aMoves[i][j][0][0] == 'X')
-									|| (aMoves[i][j][1][0] == aMoves[i][j][1][1]
-											&& aMoves[i][j][1][0] == aMoves[i][j][1][2] && aMoves[i][j][1][0] == 'X')
-									|| (aMoves[i][j][2][0] == aMoves[i][j][2][1]
-											&& aMoves[i][j][2][0] == aMoves[i][j][2][2] && aMoves[i][j][2][0] == 'X')
-									||
+			// Checks for wins
+			for (int i = 0; i < checkWin.length; i++)
+				for (int j = 0; j < checkWin[i].length; j++)
+					if (checkBig[i][j])
+						for (int k = 0; k < (checkWin[i][j]).length; k++)
+							for (int l = 0; l < (checkWin[i][j])[k].length; l++)
 
-									// Vertical checks
-									(aMoves[i][j][0][0] == aMoves[i][j][1][0]
-											&& aMoves[i][j][0][0] == aMoves[i][j][2][0] && aMoves[i][j][0][0] == 'X')
-									|| (aMoves[i][j][0][1] == aMoves[i][j][1][1]
-											&& aMoves[i][j][0][1] == aMoves[i][j][2][1] && aMoves[i][j][0][1] == 'X')
-									|| (aMoves[i][j][0][2] == aMoves[i][j][1][2]
-											&& aMoves[i][j][0][2] == aMoves[i][j][2][2] && aMoves[i][j][0][2] == 'X')
-									||
+								// Checks for whether player X wins
+								if (
 
-									// Diagonal checks
-									(aMoves[i][j][0][0] == aMoves[i][j][1][1]
-											&& aMoves[i][j][0][0] == aMoves[i][j][2][2] && aMoves[i][j][0][0] == 'X')
-									|| (aMoves[i][j][0][2] == aMoves[i][j][1][1]
-											&& aMoves[i][j][0][2] == aMoves[i][j][1][1] && aMoves[i][j][2][0] == 'X')) {
+								// Horizontal checks
+								(aMoves[i][j][0][0] == aMoves[i][j][0][1] && aMoves[i][j][0][0] == aMoves[i][j][0][2]
+										&& aMoves[i][j][0][0] == 'X')
+										|| (aMoves[i][j][1][0] == aMoves[i][j][1][1]
+												&& aMoves[i][j][1][0] == aMoves[i][j][1][2]
+												&& aMoves[i][j][1][0] == 'X')
+										|| (aMoves[i][j][2][0] == aMoves[i][j][2][1]
+												&& aMoves[i][j][2][0] == aMoves[i][j][2][2]
+												&& aMoves[i][j][2][0] == 'X')
+										||
 
-								// Changes JButton[3][3] array at gameButtons[i][j] to JButton
-								gameButtons[i][j] = bigButtonX;
-								((JButton) gameButtons[i][j]).setFont(new Font("Comic Sans MS", Font.PLAIN, 40));
+								// Vertical checks
+								(aMoves[i][j][0][0] == aMoves[i][j][1][0] && aMoves[i][j][0][0] == aMoves[i][j][2][0]
+										&& aMoves[i][j][0][0] == 'X')
+										|| (aMoves[i][j][0][1] == aMoves[i][j][1][1]
+												&& aMoves[i][j][0][1] == aMoves[i][j][2][1]
+												&& aMoves[i][j][0][1] == 'X')
+										|| (aMoves[i][j][0][2] == aMoves[i][j][1][2]
+												&& aMoves[i][j][0][2] == aMoves[i][j][2][2]
+												&& aMoves[i][j][0][2] == 'X')
+										||
 
-								// Resets gamePanel
-								panels[i][j].removeAll();
-								panels[i][j].setLayout(grid2);
-								panels[i][j].add((JButton) gameButtons[i][j]);
+								// Diagonal checks
+								(aMoves[i][j][0][0] == aMoves[i][j][1][1] && aMoves[i][j][0][0] == aMoves[i][j][2][2]
+										&& aMoves[i][j][0][0] == 'X')
+										|| (aMoves[i][j][0][2] == aMoves[i][j][1][1]
+												&& aMoves[i][j][0][2] == aMoves[i][j][1][1]
+												&& aMoves[i][j][2][0] == 'X')) {
 
-								// Sets bMoves and checkBig
-								checkBig[i][j] = false;
-								bMoves[i][j] = 'X';
+									// Changes JButton[3][3] array at gameButtons[i][j] to JButton
+									gameButtons[i][j] = bigButtonX;
+									((JButton) gameButtons[i][j]).setFont(new Font("Comic Sans MS", Font.PLAIN, 40));
 
-								// Sets false to stop rechecking
-								checkWin[i][j][k][l] = false;
+									// Resets gamePanel
+									panels[i][j].removeAll();
+									panels[i][j].setLayout(grid2);
+									panels[i][j].add((JButton) gameButtons[i][j]);
 
-								// Stops further clicks on game buttons
-								for (boolean[] row : checkClicked[i][j])
-									Arrays.fill(row, true);
+									// Sets bMoves and checkBig
+									checkBig[i][j] = false;
+									bMoves[i][j] = 'X';
 
-							}
+									// Sets false to stop rechecking
+									checkWin[i][j][k][l] = false;
 
-							// Checks for whether player Y wins
-							else if (
+									// Stops further clicks on game buttons
+									for (boolean[] row : checkClicked[i][j])
+										Arrays.fill(row, true);
 
-							// Horizontal checks
-							(aMoves[i][j][0][0] == aMoves[i][j][0][1] && aMoves[i][j][0][0] == aMoves[i][j][0][2]
-									&& aMoves[i][j][0][0] == 'O')
-									|| (aMoves[i][j][1][0] == aMoves[i][j][1][1]
-											&& aMoves[i][j][1][0] == aMoves[i][j][1][2] && aMoves[i][j][1][0] == 'O')
-									|| (aMoves[i][j][2][0] == aMoves[i][j][2][1]
-											&& aMoves[i][j][2][0] == aMoves[i][j][2][2] && aMoves[i][j][2][0] == 'O')
-									||
+								}
 
-									// Vertical checks
-									(aMoves[i][j][0][0] == aMoves[i][j][1][0]
-											&& aMoves[i][j][0][0] == aMoves[i][j][2][0] && aMoves[i][j][0][0] == 'O')
-									|| (aMoves[i][j][0][1] == aMoves[i][j][1][1]
-											&& aMoves[i][j][0][1] == aMoves[i][j][2][1] && aMoves[i][j][0][1] == 'O')
-									|| (aMoves[i][j][0][2] == aMoves[i][j][1][2]
-											&& aMoves[i][j][0][2] == aMoves[i][j][2][2] && aMoves[i][j][0][2] == 'O')
-									||
+								// Checks for whether player Y wins
+								else if (
 
-									// Diagonal checks
-									(aMoves[i][j][0][0] == aMoves[i][j][1][1]
-											&& aMoves[i][j][0][0] == aMoves[i][j][2][2] && aMoves[i][j][0][0] == 'O')
-									|| (aMoves[i][j][0][2] == aMoves[i][j][1][1]
-											&& aMoves[i][j][0][2] == aMoves[i][j][2][0] && aMoves[i][j][2][0] == 'O')) {
+								// Horizontal checks
+								(aMoves[i][j][0][0] == aMoves[i][j][0][1] && aMoves[i][j][0][0] == aMoves[i][j][0][2]
+										&& aMoves[i][j][0][0] == 'O')
+										|| (aMoves[i][j][1][0] == aMoves[i][j][1][1]
+												&& aMoves[i][j][1][0] == aMoves[i][j][1][2]
+												&& aMoves[i][j][1][0] == 'O')
+										|| (aMoves[i][j][2][0] == aMoves[i][j][2][1]
+												&& aMoves[i][j][2][0] == aMoves[i][j][2][2]
+												&& aMoves[i][j][2][0] == 'O')
+										||
 
-								// Changes JButton[3][3] array at gameButtons[i][j] to JButton
-								gameButtons[i][j] = bigButtonO;
-								((JButton) gameButtons[i][j]).setFont(new Font("Comic Sans MS", Font.PLAIN, 40));
+								// Vertical checks
+								(aMoves[i][j][0][0] == aMoves[i][j][1][0] && aMoves[i][j][0][0] == aMoves[i][j][2][0]
+										&& aMoves[i][j][0][0] == 'O')
+										|| (aMoves[i][j][0][1] == aMoves[i][j][1][1]
+												&& aMoves[i][j][0][1] == aMoves[i][j][2][1]
+												&& aMoves[i][j][0][1] == 'O')
+										|| (aMoves[i][j][0][2] == aMoves[i][j][1][2]
+												&& aMoves[i][j][0][2] == aMoves[i][j][2][2]
+												&& aMoves[i][j][0][2] == 'O')
+										||
 
-								// Resets gamePanel
-								panels[i][j].removeAll();
-								panels[i][j].setLayout(grid2);
-								panels[i][j].add((JButton) gameButtons[i][j]);
+								// Diagonal checks
+								(aMoves[i][j][0][0] == aMoves[i][j][1][1] && aMoves[i][j][0][0] == aMoves[i][j][2][2]
+										&& aMoves[i][j][0][0] == 'O')
+										|| (aMoves[i][j][0][2] == aMoves[i][j][1][1]
+												&& aMoves[i][j][0][2] == aMoves[i][j][2][0]
+												&& aMoves[i][j][2][0] == 'O')) {
 
-								// Sets bMoves and checkBig
-								checkBig[i][j] = false;
-								bMoves[i][j] = 'Y';
+									// Changes JButton[3][3] array at gameButtons[i][j] to JButton
+									gameButtons[i][j] = bigButtonO;
+									((JButton) gameButtons[i][j]).setFont(new Font("Comic Sans MS", Font.PLAIN, 40));
 
-								// Sets false to stop rechecking
-								checkWin[i][j][k][l] = false;
+									// Resets gamePanel
+									panels[i][j].removeAll();
+									panels[i][j].setLayout(grid2);
+									panels[i][j].add((JButton) gameButtons[i][j]);
 
-								// Stops further clicks on game buttons
-								for (boolean[] row : checkClicked[i][j])
-									Arrays.fill(row, true);
-							}
-	}
+									// Sets bMoves and checkBig
+									checkBig[i][j] = false;
+									bMoves[i][j] = 'Y';
+
+									// Sets false to stop rechecking
+									checkWin[i][j][k][l] = false;
+
+									// Stops further clicks on game buttons
+									for (boolean[] row : checkClicked[i][j])
+										Arrays.fill(row, true);
+								}
+		}
+	};
 
 }
